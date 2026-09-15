@@ -11,14 +11,17 @@ def bfgs(
     hessian_calc:str = "powell_damping",
     eps:float = 1e-12,
     omega:float = 0.2,
-    target_indices:tuple[int] = None,)->torch.Tensor:
+    target_indices:tuple[int] = None,
+    Hinv:torch.Tensor = None,
+    return_Hinv:bool = False)->torch.Tensor:
 
     if target_indices is None:
         target_indices = tuple(range(x_init.shape[0]))
 
     x = x_init.detach().clone().requires_grad_(True)
 
-    Hinv = torch.eye(len(target_indices), dtype=x.dtype, device=x.device)
+    if Hinv is None:
+        Hinv = torch.eye(len(target_indices), dtype=x.dtype, device=x.device)
 
     for _ in range(max_itr):
         value, grad = get_f_and_grad(func=func, x=x, target_indices=target_indices)
@@ -44,4 +47,7 @@ def bfgs(
 
         x = x_next.detach().clone().requires_grad_(True)
 
-    return x.detach().clone()
+    if return_Hinv:
+        return x.detach().clone(), Hinv.detach().clone()
+    else:
+        return x.detach().clone()

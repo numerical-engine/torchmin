@@ -11,7 +11,7 @@ def get_step(
     rho:float,
     constr_eq:list[callable],
     constr_lower:list[callable],
-    target_indices:tuple[int])->tuple[torch.Tensor, float]:
+    target_indices:tuple[int],)->tuple[torch.Tensor, float]:
 
     def func_w_penalty(x:torch.Tensor)->torch.float:
         c_b = math._get_b(bounds, x, target_indices, detach=False)
@@ -86,13 +86,17 @@ def sqp(
     hessian_calc:str = "powell_damping",
     eps:float = 1e-12,
     omega:float = 0.2,
-    target_indices:tuple[int] = None,)->torch.Tensor:
+    target_indices:tuple[int] = None,
+    Hess:torch.Tensor = None,
+    return_Hess:bool = False)->torch.Tensor:
 
     if target_indices is None:
             target_indices = tuple(range(x_init.shape[0]))
 
     x = x_init.detach().clone().requires_grad_(True)
-    Hess = torch.eye(len(target_indices), dtype=x.dtype, device=x.device)
+
+    if Hess is None:
+        Hess = torch.eye(len(target_indices), dtype=x.dtype, device=x.device)
 
     for _ in range(max_itr):
         _, grad = math.get_f_and_grad(func=func, x=x, target_indices=target_indices)
@@ -115,4 +119,7 @@ def sqp(
 
         x = x_next.detach().clone().requires_grad_(True)
 
-    return x.detach().clone()
+    if return_Hess:
+        return x.detach().clone(), Hess.detach().clone()
+    else:
+        return x.detach().clone()
